@@ -2,13 +2,14 @@ DEFINE CLASS Ayudante AS CUSTOM
     * Propiedades.
     PROTECTED cClaseRepositorio
     PROTECTED oConexion
+    PROTECTED oRepositorio
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION Init
         IF VARTYPE(_SCREEN.oUtiles) != 'O' OR ;
                 VARTYPE(_SCREEN.oValidacion) != 'O' OR ;
                 !THIS.EstablecerConexion() OR ;
-                !THIS.ValidarRepositorio() THEN
+                !THIS.EstablecerRepositorio() THEN
             RETURN .F.
         ENDIF
     ENDFUNC
@@ -51,20 +52,17 @@ DEFINE CLASS Ayudante AS CUSTOM
         ENDIF
         * fin { validaciones de parámetros }
 
-        LOCAL loRepositorio, loModelo
+        LOCAL loModelo
 
         IF tnBandera == 1 THEN    && agregar.
-            loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
-
-            IF loRepositorio.NombreExiste(tcNombre) THEN
+            IF THIS.oRepositorio.NombreExiste(tcNombre) THEN
                 MESSAGEBOX('Nombre: Ya existe.', 0+48, 'Mensaje del sistema')
                 RETURN .F.
             ENDIF
         ENDIF
 
         IF tnBandera == 2 THEN    && modificar.
-            loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
-            loModelo = loRepositorio.ObtenerPorNombre(tcNombre)
+            loModelo = THIS.oRepositorio.ObtenerPorNombre(tcNombre)
 
             IF VARTYPE(loModelo) == 'O' THEN
                 IF loModelo.ObtenerCodigo() != tnCodigo THEN
@@ -95,11 +93,7 @@ DEFINE CLASS Ayudante AS CUSTOM
         ENDIF
         * fin { validaciones de parámetros }
 
-        LOCAL loRepositorio
-
-        loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
-
-        IF loRepositorio.RucExiste(tcRUC) THEN
+        IF THIS.oRepositorio.RucExiste(tcRUC) THEN
             MESSAGEBOX('RUC: Ya existe.', 0+48, 'Mensaje del sistema')
             RETURN .F.
         ENDIF
@@ -107,15 +101,7 @@ DEFINE CLASS Ayudante AS CUSTOM
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION EstablecerConexion
-        * inicio { validaciones }
-        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
-                EMPTY(THIS.cClaseRepositorio) THEN
-            RETURN .F.
-        ENDIF
-        * fin { validaciones }
-
         LOCAL loConexion, laTabla, lnContador, lcTabla, lcAlias
-
         loConexion = CREATEOBJECT('Conexion', goAplicacion.ObtenerRutaDatos())
 
         IF VARTYPE(loConexion) == 'O' THEN
@@ -177,7 +163,19 @@ DEFINE CLASS Ayudante AS CUSTOM
     ENDFUNC
 
     * ------------------------------------------------------------------------ *
-    PROTECTED FUNCTION ValidarRepositorio
+    PROTECTED FUNCTION EstablecerRepositorio
+        * inicio { validaciones }
+        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
+                EMPTY(THIS.cClaseRepositorio) THEN
+            RETURN .F.
+        ENDIF
+
+        IF VARTYPE(THIS.oConexion) != 'O' OR ;
+                THIS.oConexion.Class != 'Conexion' THEN
+            RETURN .F.
+        ENDIF
+        * fin { validaciones }
+
         LOCAL loRepositorio, loExcepcion
 
         TRY
@@ -188,7 +186,7 @@ DEFINE CLASS Ayudante AS CUSTOM
                 loExcepcion.LineNo, ;
                 loExcepcion.Message, ;
                 loExcepcion.LineContents, ;
-                JUSTSTEM(THIS.ClassLibrary) + '.ValidarRepositorio()' ;
+                JUSTSTEM(THIS.ClassLibrary) + '.EstablecerRepositorio()' ;
             )
         ENDTRY
 
@@ -197,5 +195,7 @@ DEFINE CLASS Ayudante AS CUSTOM
                 JUSTSTEM(THIS.ClassLibrary) + '.ValidarRepositorio()')
             RETURN .F.
         ENDIF
+
+        THIS.oRepositorio = loRepositorio
     ENDFUNC
 ENDDEFINE
