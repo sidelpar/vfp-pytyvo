@@ -1,16 +1,14 @@
-DEFINE CLASS Ayudante AS Validacion
+DEFINE CLASS Ayudante AS CUSTOM
     * Propiedades.
     PROTECTED cClaseRepositorio
     PROTECTED oConexion
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION Init
-        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
-                EMPTY(THIS.cClaseRepositorio) THEN
-            RETURN .F.
-        ENDIF
-
-        IF !THIS.EstablecerConexion() THEN
+        IF VARTYPE(_SCREEN.oUtiles) != 'O' OR ;
+                VARTYPE(_SCREEN.oValidacion) != 'O' OR ;
+                !THIS.EstablecerConexion() OR ;
+                !THIS.ValidarRepositorio() THEN
             RETURN .F.
         ENDIF
     ENDFUNC
@@ -29,23 +27,25 @@ DEFINE CLASS Ayudante AS Validacion
             tnLongitudMaxima = 30
         ENDIF
 
-        IF !THIS.ValidarTexto( ;
+        IF !_SCREEN.oValidacion.ValidarTexto( ;
                 tcNombre, 'Nombre', tnLongitudMinima, tnLongitudMaxima) THEN
             RETURN .F.
         ENDIF
 
-        IF !THIS.ValidarNumero(tnBandera, 'Bandera', 1, 2) THEN
+        IF !_SCREEN.oValidacion.ValidarNumero(tnBandera, 'Bandera', 1, 2) THEN
             RETURN .F.
         ENDIF
 
         IF tnBandera == 1 THEN    && agregar.
-            IF !THIS.ValidarNumero(tnCodigo, 'Código', 0, 32767) THEN
+            IF !_SCREEN.oValidacion.ValidarNumero( ;
+                    tnCodigo, 'Código', 0, 32767) THEN
                 RETURN .F.
             ENDIF
         ENDIF
 
         IF tnBandera == 2 THEN   && modificar.
-            IF !THIS.ValidarNumero(tnCodigo, 'Código', 1, 32767) THEN
+            IF !_SCREEN.oValidacion.ValidarNumero( ;
+                    tnCodigo, 'Código', 1, 32767) THEN
                 RETURN .F.
             ENDIF
         ENDIF
@@ -54,35 +54,24 @@ DEFINE CLASS Ayudante AS Validacion
         LOCAL loRepositorio, loModelo
 
         IF tnBandera == 1 THEN    && agregar.
-            IF THIS.ValidarRepositorio() THEN
-                loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, ;
-                    THIS.oConexion)
+            loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
 
-                IF loRepositorio.NombreExiste(tcNombre) THEN
-                    MESSAGEBOX('Nombre: Ya existe.', 0+48, ;
-                        'Mensaje del sistema')
-                    RETURN .F.
-                ENDIF
-            ELSE
+            IF loRepositorio.NombreExiste(tcNombre) THEN
+                MESSAGEBOX('Nombre: Ya existe.', 0+48, 'Mensaje del sistema')
                 RETURN .F.
             ENDIF
         ENDIF
 
         IF tnBandera == 2 THEN    && modificar.
-            IF THIS.ValidarRepositorio() THEN
-                loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, ;
-                    THIS.oConexion)
-                loModelo = loRepositorio.ObtenerPorNombre(tcNombre)
+            loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
+            loModelo = loRepositorio.ObtenerPorNombre(tcNombre)
 
-                IF VARTYPE(loModelo) == 'O' THEN
-                    IF loModelo.ObtenerCodigo() != tnCodigo THEN
-                        MESSAGEBOX('Nombre: Ya existe.', 0+48, ;
-                            'Mensaje del sistema')
-                        RETURN .F.
-                    ENDIF
+            IF VARTYPE(loModelo) == 'O' THEN
+                IF loModelo.ObtenerCodigo() != tnCodigo THEN
+                    MESSAGEBOX('Nombre: Ya existe.', 0+48, ;
+                        'Mensaje del sistema')
+                    RETURN .F.
                 ENDIF
-            ELSE
-                RETURN .F.
             ENDIF
         ENDIF
     ENDFUNC
@@ -92,7 +81,7 @@ DEFINE CLASS Ayudante AS Validacion
         LPARAMETERS tcRUC, tnBandera
 
         * inicio { validaciones de parámetros }
-        IF !THIS.ValidarTexto(tcRUC, 'RUC', 5, 15) THEN
+        IF !_SCREEN.oValidacion.ValidarTexto(tcRUC, 'RUC', 5, 15) THEN
             RETURN .F.
         ENDIF
 
@@ -101,28 +90,30 @@ DEFINE CLASS Ayudante AS Validacion
             RETURN .F.
         ENDIF
 
-        IF !THIS.ValidarNumero(tnBandera, 'Bandera', 1, 2) THEN
+        IF !_SCREEN.oValidacion.ValidarNumero(tnBandera, 'Bandera', 1, 2) THEN
             RETURN .F.
         ENDIF
         * fin { validaciones de parámetros }
 
         LOCAL loRepositorio
 
-        IF THIS.ValidarRepositorio() THEN
-            loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, ;
-                THIS.oConexion)
+        loRepositorio = CREATEOBJECT(THIS.cClaseRepositorio, THIS.oConexion)
 
-            IF loRepositorio.RucExiste(tcRUC) THEN
-                MESSAGEBOX('RUC: Ya existe.', 0+48, 'Mensaje del sistema')
-                RETURN .F.
-            ENDIF
-        ELSE
+        IF loRepositorio.RucExiste(tcRUC) THEN
+            MESSAGEBOX('RUC: Ya existe.', 0+48, 'Mensaje del sistema')
             RETURN .F.
         ENDIF
     ENDFUNC
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION EstablecerConexion
+        * inicio { validaciones }
+        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
+                EMPTY(THIS.cClaseRepositorio) THEN
+            RETURN .F.
+        ENDIF
+        * fin { validaciones }
+
         LOCAL loConexion, laTabla, lnContador, lcTabla, lcAlias
 
         loConexion = CREATEOBJECT('Conexion', goAplicacion.ObtenerRutaDatos())
@@ -187,13 +178,6 @@ DEFINE CLASS Ayudante AS Validacion
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION ValidarRepositorio
-        * inicio { validaciones }
-        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
-                EMPTY(THIS.cClaseRepositorio) THEN
-            RETURN .F.
-        ENDIF
-        * fin { validaciones }
-
         LOCAL loRepositorio, loExcepcion
 
         TRY
