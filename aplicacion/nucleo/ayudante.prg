@@ -101,6 +101,13 @@ DEFINE CLASS Ayudante AS CUSTOM
 
     * ------------------------------------------------------------------------ *
     PROTECTED FUNCTION EstablecerConexion
+        * inicio { validaciones }
+        IF VARTYPE(THIS.cClaseRepositorio) != 'C' OR ;
+                EMPTY(THIS.cClaseRepositorio) THEN
+            RETURN .F.
+        ENDIF
+        * fin { validaciones }
+
         LOCAL loConexion, laTabla, lnContador, lcTabla, lcAlias
         loConexion = CREATEOBJECT('Conexion', goAplicacion.ObtenerRutaDatos())
 
